@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -47,10 +46,6 @@ func main() {
 	}
 
 	go rtConfig.WatchConfigChanges()
-
-	// инициализируем с начальной конфигурацией
-	initialConfig := rtConfig.GetConfig()
-	fmt.Printf("Initial config: %+v \n", initialConfig)
 
 	// поднимаем http сервер
 	realtime_config.StartServer(rtConfig)

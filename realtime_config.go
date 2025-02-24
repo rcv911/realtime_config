@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/rcv911/realtime_config/config"
 	"github.com/rs/zerolog"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 )
@@ -20,7 +19,7 @@ type ETCDClient interface {
 type RealTimeConfig struct {
 	logger      zerolog.Logger
 	client      ETCDClient
-	config      *config.Config
+	config      map[string]string
 	mutex       sync.RWMutex
 	configKey   string
 	watchCancel context.CancelFunc
@@ -31,13 +30,13 @@ func NewRealTimeConfig(logger zerolog.Logger, etcdClient ETCDClient, configKey s
 	return &RealTimeConfig{
 		logger:    logger,
 		client:    etcdClient,
-		config:    &config.Config{}, // todo: явная зависимость. map?
+		config:    make(map[string]string),
 		configKey: configKey,
 	}, nil
 }
 
 // GetConfig безопасно возвращает текущую конфигурацию
-func (rt *RealTimeConfig) GetConfig() *config.Config {
+func (rt *RealTimeConfig) GetConfig() map[string]string {
 	rt.mutex.RLock()
 	defer rt.mutex.RUnlock()
 

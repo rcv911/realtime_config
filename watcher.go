@@ -2,12 +2,12 @@ package realtime_config
 
 import (
 	"context"
-	"log"
 
-	"github.com/rcv911/realtime_config/config"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 	"gopkg.in/yaml.v3"
 )
+
+// todo: atomic ?
 
 // WatchConfigChanges следит за изменениями конфигурации в etcd
 func (rt *RealTimeConfig) WatchConfigChanges() {
@@ -19,9 +19,9 @@ func (rt *RealTimeConfig) WatchConfigChanges() {
 	for watchResp := range watchChan {
 		for _, event := range watchResp.Events {
 			if event.Type == etcdv3.EventTypePut {
-				newConfig := &config.Config{}
-				if err := yaml.Unmarshal(event.Kv.Value, newConfig); err != nil {
-					log.Printf("failed to unmarshal new config: %v", err)
+				var newConfig map[string]string
+				if err := yaml.Unmarshal(event.Kv.Value, &newConfig); err != nil {
+					rt.logger.Error().Msgf("failed to unmarshal new config: %v", err)
 					continue
 				}
 

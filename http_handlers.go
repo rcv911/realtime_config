@@ -12,14 +12,14 @@ func (rt *RealTimeConfig) GetConfigHandler(w http.ResponseWriter, r *http.Reques
 	rt.mutex.RLock()
 	defer rt.mutex.RUnlock()
 
-	val, err := rt.client.Get(r.Context(), rt.configKey)
+	cfgBytes, err := rt.client.Get(r.Context(), rt.configKey)
 	if err != nil {
 		rt.logger.Error().Stack().Err(err).Send()
 		return
 	}
 
-	cfg := &config.Config{}
-	err = yaml.Unmarshal(val, cfg)
+	var cfg map[string]string
+	err = yaml.Unmarshal(cfgBytes, &cfg)
 	if err != nil {
 		rt.logger.Error().Stack().Err(err).Send()
 		return
@@ -36,7 +36,7 @@ func (rt *RealTimeConfig) GetConfigHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (rt *RealTimeConfig) UpdateConfigHandler(w http.ResponseWriter, r *http.Request) {
-	var updates map[string]interface{}
+	var updates map[string]string
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		rt.logger.Error().Msgf("%d | invalid request body", http.StatusBadRequest)
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -46,11 +46,11 @@ func (rt *RealTimeConfig) UpdateConfigHandler(w http.ResponseWriter, r *http.Req
 	rt.mutex.Lock()
 	defer rt.mutex.Unlock()
 
-	if newValue, ok := updates["TmpStr"].(string); ok {
-		rt.config.TmpStr = newValue
+	if newValue, ok := updates[config.CfgTmpStr]; ok {
+		rt.config[config.CfgTmpStr] = newValue
 	}
-	if newValue, ok := updates["TmpInt"].(float64); ok { // JSON numbers decode as float64
-		rt.config.TmpInt = int(newValue)
+	if newValue, ok := updates[config.CfgTmpInt]; ok {
+		rt.config[config.CfgTmpInt] = newValue
 	}
 
 	updatedConfig, err := yaml.Marshal(rt.config)
