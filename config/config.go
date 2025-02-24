@@ -27,5 +27,6 @@ func LoadConfigFromFile(filepath string) (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
+	// todo: в мапу для универсальности?
 	return config, nil
 }

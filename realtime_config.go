@@ -2,21 +2,22 @@ package realtime_config
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"sync"
-	"time"
 
 	"github.com/rcv911/realtime_config/config"
 	etcdv3 "go.etcd.io/etcd/client/v3"
-	"gopkg.in/yaml.v3"
 )
 
-const dialTimeout = 3 * time.Second
+type ETCDClient interface {
+	Get(ctx context.Context, key string) error
+	Put(ctx context.Context, key, val string) error
+	Watch(ctx context.Context, key string) etcdv3.WatchChan
+	Close() error
+}
 
 // RealTimeConfig представляет структуру для работы с real-time конфигурацией
 type RealTimeConfig struct {
-	client      *etcdv3.Client
+	client      ETCDClient
 	config      *config.Config
 	mutex       sync.RWMutex
 	configKey   string
@@ -24,55 +25,12 @@ type RealTimeConfig struct {
 }
 
 // NewRealTimeConfig инициализирует соединение с etcd и загружает начальную конфигурацию
-func NewRealTimeConfig(etcdEndpoints []string, configKey string) (*RealTimeConfig, error) {
-	client, err := etcdv3.New(etcdv3.Config{
-		Endpoints:   etcdEndpoints,
-		DialTimeout: dialTimeout,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to etcd: %w", err)
-	}
-
-	//ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	//resp, err := client.Get(ctx, configKey)
-	//cancel()
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to get config from etcd: %w", err)
-	//}
-
-	// todo: конфиг
-	cfg, err := config.LoadConfigFromFile("config/config_template.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load config from file: %w", err)
-	}
-
-	cfgBytes, err := yaml.Marshal(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
-	resp, err := client.Put(ctx, configKey, string(cfgBytes))
-	cancel()
-	if err != nil {
-		log.Fatalf("Failed to put key: %v", err)
-	}
-
-	fmt.Println(resp)
-
-	//if err = yaml.Unmarshal(resp.Kvs[0].Value, cfg); err != nil {
-	//	return nil, fmt.Errorf("failed to unmarshal config: %w", err)
-	//}
-
-	rtConfig := &RealTimeConfig{
-		client:    client,
-		config:    cfg,
+func NewRealTimeConfig(etcdClient ETCDClient, configKey string) (*RealTimeConfig, error) {
+	return &RealTimeConfig{
+		client:    etcdClient,
+		config:    &config.Config{}, // todo: явная зависимость. map?
 		configKey: configKey,
-	}
-
-	go rtConfig.watchConfigChanges()
-
-	return rtConfig, nil
+	}, nil
 }
 
 // GetConfig безопасно возвращает текущую конфигурацию

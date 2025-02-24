@@ -1,22 +1,48 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/rcv911/realtime_config"
+	"github.com/rcv911/realtime_config/pkg/etcd"
+	etcdv3 "go.etcd.io/etcd/client/v3"
 )
 
-func main() {
-	//etcdEndpoints := []string{"localhost:2379"}
-	etcdEndpoints := []string{"http://127.0.0.1:2379"}
-	configKey := "/app/config"
+const timeout = 3 * time.Second
 
-	rtConfig, err := realtime_config.NewRealTimeConfig(etcdEndpoints, configKey)
+func main() {
+	ctx := context.Background()
+
+	client, err := etcdv3.New(etcdv3.Config{
+		Endpoints:   []string{"http://127.0.0.1:2379"},
+		DialTimeout: timeout,
+	})
+	if err != nil {
+		log.Fatalf("failed to connect to etcd: %v", err)
+	}
+
+	etcdClient := etcd.New(client)
+
+	configKey := "/app/config"
+	filepath := "config/config_template.yaml"
+
+	// todo: realtime_config как клиент/либа, которая ходит в etcd + по эвенту (канал?)
+	rtConfig, err := realtime_config.NewRealTimeConfig(etcdClient, configKey)
 	if err != nil {
 		log.Fatalf("failed to initialize real-time config: %v", err)
 	}
 	defer rtConfig.Close()
+
+	// загрузить тестовый конфиг
+	err = rtConfig.LoadConfig(ctx, filepath)
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	go rtConfig.WatchConfigChanges()
 
 	// Инициализируем приложение с начальной конфигурацией
 	initialConfig := rtConfig.GetConfig()

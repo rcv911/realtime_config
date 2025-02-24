@@ -9,8 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// watchConfigChanges следит за изменениями конфигурации в etcd
-func (rt *RealTimeConfig) watchConfigChanges() {
+// WatchConfigChanges следит за изменениями конфигурации в etcd
+func (rt *RealTimeConfig) WatchConfigChanges() {
 	ctx, cancel := context.WithCancel(context.Background())
 	rt.watchCancel = cancel
 
@@ -18,11 +18,9 @@ func (rt *RealTimeConfig) watchConfigChanges() {
 
 	for watchResp := range watchChan {
 		for _, event := range watchResp.Events {
+			// todo: эвент в etcd
 			if event.Type == etcdv3.EventTypePut {
-
-				// todo: новый конфиг
 				newConfig := &config.Config{}
-
 				if err := yaml.Unmarshal(event.Kv.Value, newConfig); err != nil {
 					log.Printf("failed to unmarshal new config: %v \n", err)
 					continue
