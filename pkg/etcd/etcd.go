@@ -37,16 +37,20 @@ func New(etcdClient ETCD) *Client {
 	}
 }
 
-func (c *Client) Get(ctx context.Context, key string) error {
+func (c *Client) Get(ctx context.Context, key string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	_, err := c.etcd.Get(ctx, key)
+	resp, err := c.etcd.Get(ctx, key)
 	if err != nil {
-		return fmt.Errorf("etcd get failed: %w", err)
+		return nil, fmt.Errorf("etcd get failed: %w", err)
 	}
 
-	return nil
+	if len(resp.Kvs) == 0 {
+		return nil, fmt.Errorf("etcd get failed: key not found")
+	}
+
+	return resp.Kvs[0].Value, nil
 }
 
 func (c *Client) Put(ctx context.Context, key, val string) error {

@@ -18,16 +18,15 @@ func (rt *RealTimeConfig) WatchConfigChanges() {
 
 	for watchResp := range watchChan {
 		for _, event := range watchResp.Events {
-			// todo: эвент в etcd
 			if event.Type == etcdv3.EventTypePut {
 				newConfig := &config.Config{}
 				if err := yaml.Unmarshal(event.Kv.Value, newConfig); err != nil {
-					log.Printf("failed to unmarshal new config: %v \n", err)
+					log.Printf("failed to unmarshal new config: %v", err)
 					continue
 				}
 
-				rt.updateConfig(newConfig)
-				log.Printf("updated config: %v \n", newConfig)
+				rt.updateConfigSelective(newConfig)
+				rt.logger.Info().Msgf("updated config: %v", newConfig)
 			}
 		}
 	}
